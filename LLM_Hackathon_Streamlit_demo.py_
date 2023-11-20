@@ -1,0 +1,57 @@
+import streamlit as st
+import pandas as pd
+import os
+import csv
+#import tkinter
+
+from fastai.vision.all import *
+from fastai.text import *
+#from dash import Dash, dcc, html, Input, Output, callback, State, dash_table
+
+
+def load_model(model_path):
+    return load_learner(model_path)
+
+def predict_text(model, text_input):
+    pred, _, _ = model.predict(text_input)
+    return pred
+
+def form_callback(user_input, inquiry_class):
+    with open('Inquiry_log.csv', 'a', newline='') as csvfile:
+        csvfile.write(f"{user_input},{inquiry_class}\n")
+
+def main():
+    model_path = 'export.pkl'
+    loaded_model = load_model(model_path)
+
+    st.title('Customer Inquiry Classification')
+    st.header('Enter inquiry')
+
+    with st.form(key="my_form", clear_on_submit=True):
+        user_input = st.text_input('Inquiry', key='ticker')
+        inquiry_class = predict_text(loaded_model, user_input)
+        submitted_input = st.form_submit_button("Submit")
+
+    st.header('Classification: {}'.format(inquiry_class))
+
+    with st.sidebar:
+        st.header('Inquiry history')
+        
+        if submitted_input:
+            form_callback(user_input,inquiry_class)
+
+        st.dataframe(pd.read_csv("Inquiry_log.csv",names=["Inquiry","Classification"]),height=600, width=300)
+
+
+if __name__ == '__main__':
+    main()
+
+
+
+os.environ['DB_APP_PORT'] = f'{8501}'   
+cluster_id = spark.conf.get("spark.databricks.clusterUsageTags.clusterId")
+workspace_url = spark.conf.get("spark.databricks.workspaceUrl")
+org_id = spark.conf.get("spark.databricks.clusterUsageTags.clusterOwnerOrgId")
+proxy_prefix = f'dbc-dp-{org_id}.cloud.databricks.com'
+endpoint_url = f"https://{proxy_prefix}/driver-proxy/o/{org_id}/{cluster_id}/{8501}/"
+print(f"Access this API at {endpoint_url}")
